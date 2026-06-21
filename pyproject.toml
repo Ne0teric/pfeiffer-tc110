@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pfeiffer-tc110"
+version = "0.1.0"
+description = "Minimal dependency-free Pfeiffer Vacuum protocol driver for the TC110 turbopump drive unit (RS-485)."
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = ["pfeiffer", "tc110", "turbopump", "vacuum", "rs485", "rs-485"]
+
+[project.optional-dependencies]
+serial = ["pyserial"]      # for talking to a real port (the driver itself is stdlib-only)
+test = ["pytest"]
+
+[tool.setuptools]
+py-modules = ["pfeiffer_tc110"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
