@@ -38,6 +38,13 @@ print(tc.read_parameter(s, addr, "DrvPower"), "W")
 print(tc.read_parameter(s, addr, 313), "V")            # drive voltage
 ```
 
+The same protocol also reads **Pfeiffer DigiLine gauges** (e.g. the MPT 200 FullRange),
+which report pressure on P:740 (their address is a rotary switch, 1–16):
+
+```python
+print(tc.read_pressure(s, gauge_addr), "mbar")         # P:740 (hPa = mbar)
+```
+
 `python -m pfeiffer_tc110` (or `python pfeiffer_tc110.py`) prints the whole parameter
 table — the same reference shown below.
 

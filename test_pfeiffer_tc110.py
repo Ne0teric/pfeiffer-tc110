@@ -1,5 +1,5 @@
 """
-Unit tests for the in-tree TC110 Pfeiffer-protocol driver (vacuum.pfeiffer_turbo).
+Unit tests for the TC110 Pfeiffer-protocol driver (pfeiffer_tc110).
 No hardware: a FakeSerial plays back telegrams. Frames + checksums are asserted
 byte-exact against the worked examples in the TC110 manual §5.2.3/5.2.4.
 """
@@ -144,3 +144,11 @@ def test_full_param_table_present():
     # the whole documented set is mapped (control + status + set-values + DCU)
     assert pt.PARAMS[23].name == "MotorPump"
     assert {10, 23, 60, 309, 342, 346, 316, 303, 797, 740}.issubset(pt.PARAMS)
+
+
+def test_read_pressure_p740_digiline():
+    # DigiLine gauge (MPT 200) pressure via P:740. Manual: P:740@001 query checksum
+    # '106'; response '100023' = 1.000e3 hPa = 1000 mbar.
+    ser = FakeSerial(b"0011074006100023025\r")
+    assert pt.read_pressure(ser, 1) == pytest.approx(1000.0)
+    assert bytes(ser.written) == b"0010074002=?106\r"

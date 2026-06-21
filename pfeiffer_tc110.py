@@ -272,7 +272,7 @@ def write_parameter(ser, addr: int, param, value) -> None:
     _control_raw(ser, addr, num, _encode(spec.dtype, value))
 
 
-# ── named convenience (names match the calls in vacuum.hw) ────────────────────
+# ── named convenience (names match the common turbo operations) ────────────────────
 def read_rotation_speed(ser, addr: int) -> int:
     """Actual rotation speed, Hz (P:309)."""
     return int(read_parameter(ser, addr, 309))
@@ -299,8 +299,17 @@ def at_set_speed(ser, addr: int) -> bool:
 
 
 def read_error_code(ser, addr: int) -> str:
-    """Drive error code (P:303); '000000' = no error."""
+    """Drive/gauge error code (P:303); '000000' = no error."""
     return read_parameter(ser, addr, 303)
+
+
+def read_pressure(ser, addr: int) -> float:
+    """Pressure in mbar from a Pfeiffer DigiLine gauge (e.g. MPT 200) on the bus —
+    reads P:740 (u_expo, hPa) and returns it as mbar (1 hPa = 1 mbar). The DigiLine
+    gauges speak this same Pfeiffer Vacuum protocol; their address is the rotary
+    switch (1..16). Verified vs the MPT 200 manual: P:740@001 query checksum '106',
+    '100023' → 1000 mbar."""
+    return float(read_parameter(ser, addr, 740))
 
 
 def set_motor(ser, addr: int, on: bool) -> None:
