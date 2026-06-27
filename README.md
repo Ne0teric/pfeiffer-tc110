@@ -14,9 +14,9 @@ reused and inspected on its own.
 > ships in this repo — the §5.2 telegram frame and §6 parameter set referenced
 > throughout are right here, so the driver is self-contained. This driver is also used
 > in production by the `vacuum-storage-unified-v3` controller
-> (github.com/Ne0teric/vacuum-storage-unified-v3), where its operational spin model is
-> *arm the pumping station once (P:010) then drive the rotor via the motor command
-> (P:023)*; this standalone driver keeps the manual's generic documented sequence.
+> (github.com/Ne0teric/vacuum-storage-unified-v3); both use the same spin model — **arm
+> the pumping station once (`P:010`), then drive the rotor via the motor command (`P:023`)**
+> (see "What 'pumping station' and friends mean" below).
 
 > **Why this exists:** the two public Pfeiffer libraries don't cover this — PyPI
 > `pfeiffer-vacuum-protocol` (electronsandstuff) is *gauge-only*, and `tspspi/pfeifferpumps`
