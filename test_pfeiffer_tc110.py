@@ -98,17 +98,33 @@ def test_set_motor_writes_p023():
     assert bytes(ser.written) == pt._build(1, "10", 23, "111111")
 
 
-def test_spin_up_does_motor_then_pumping_station():
-    ser = FakeSerial(_echo(1, 23, "111111") + _echo(1, 10, "111111"))
+def test_spin_up_is_motor_on_only():
+    # arm-once model: the station is armed separately; spin up/down is the MOTOR (P:023).
+    ser = FakeSerial(_echo(1, 23, "111111"))
     pt.spin(ser, 1, True)
-    # P:023 (motor) first, then P:010 (pumping station) — manual §7.3
-    assert bytes(ser.written) == pt._build(1, "10", 23, "111111") + pt._build(1, "10", 10, "111111")
+    assert bytes(ser.written) == pt._build(1, "10", 23, "111111")   # P:023 = 1, nothing else
 
 
-def test_spin_down_clears_pumping_station_only():
-    ser = FakeSerial(_echo(1, 10, "000000"))
+def test_spin_down_is_motor_off_only():
+    ser = FakeSerial(_echo(1, 23, "000000"))
     pt.spin(ser, 1, False)
-    assert bytes(ser.written) == pt._build(1, "10", 10, "000000")   # §7.4: P:010=0
+    assert bytes(ser.written) == pt._build(1, "10", 23, "000000")   # P:023 = 0 (coast); P:010 untouched
+
+
+def test_arm_station_sets_rs485_then_holds_motor_then_arms():
+    # arm without spinning: P:060=2, P:023=0 (rotor held off), P:010=1 (station on)
+    ser = FakeSerial(_echo(1, 60, "002") + _echo(1, 23, "000000") + _echo(1, 10, "111111"))
+    pt.arm_station(ser, 1, spinning=False)
+    assert bytes(ser.written) == (
+        pt._build(1, "10", 60, "002")
+        + pt._build(1, "10", 23, "000000")
+        + pt._build(1, "10", 10, "111111"))
+
+
+def test_arm_station_recovering_keeps_motor_running():
+    ser = FakeSerial(_echo(1, 60, "002") + _echo(1, 23, "111111") + _echo(1, 10, "111111"))
+    pt.arm_station(ser, 1, spinning=True)
+    assert pt._build(1, "10", 23, "111111") in bytes(ser.written)
 
 
 # ── generic typed access + codecs ────────────────────────────────────────────

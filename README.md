@@ -37,9 +37,9 @@ addr = 1                                                # the drive's RS-485 add
 print(tc.read_rotation_speed(s, addr), "Hz")           # actual speed
 print(tc.read_bearing_temperature(s, addr), "°C")
 
-tc.set_control_via_rs485(s, addr)                       # ONE-TIME: let the bus command it (P:060=2)
-tc.spin(s, addr, True)                                  # spin up  (motor P:023, then station P:010)
-tc.spin(s, addr, False)                                 # spin down (clears P:010)
+tc.arm_station(s, addr)                                 # ONCE per power cycle: P:060=2 + P:010=1 (rotor held off)
+tc.spin(s, addr, True)                                  # spin up   — motor on  (P:023=1)
+tc.spin(s, addr, False)                                 # spin down — motor off (P:023=0, rotor coasts; station stays armed)
 
 # anything else in the table, generically (by number or name):
 print(tc.read_parameter(s, addr, "DrvPower"), "W")
@@ -60,14 +60,27 @@ table — the same reference shown below.
 
 The two that trip people up:
 
-- **P:023 `MotorPump`** — the **turbo motor itself** (the thing that spins). `1` = run.
-- **P:010 `PumpgStatn`** — the **pumping station master switch**: `1` starts the whole
-  station (spins the pump up, *and* acknowledges errors), `0` stops it.
+- **P:010 `PumpgStatn`** — the **pumping station master switch**, and the *real* start.
+  Activating it (`1`) runs the self-test and brings the station **+ motor** into operation;
+  it's the only command that triggers a self-test. Defaults to `0` and resets to `0` on
+  power-up.
+- **P:023 `MotorPump`** — the **turbo motor itself**. **Defaults to `1`.** Per the manual,
+  once the station is armed "the motor can be switched off and on via P:023" — so this is
+  the rotor on/off once the station is up.
 
-Per the manual the **spin-up order is motor (P:023) → station (P:010)**, and spin-down
-just clears the station (P:010=0), which does a controlled deceleration + configured
-venting. `spin()` does this for you. The drive only accepts these over the bus once it's
-in **RS-485 control** (`P:060 = 2`, via `set_control_via_rs485()`).
+**Spin model — arm once, then drive the motor.** The manual's switch-on lists `P:023=1`
+*(default)* then `P:010=1`, but since `P:023` is already `1`, **`P:010=1` is what actually
+spins the pump up**, and the rotor is then controlled by `P:023` alone. So:
+
+- **`arm_station()`** once per power cycle — `P:060=2` (RS-485 control) → hold the motor off
+  (`P:023=0`) → arm the station (`P:010=1`). The self-test happens here, once.
+- **`spin(on)`** = motor on/off (`P:023`). Up spins the rotor; down lets it **coast** with
+  the station still armed — no station-shutdown sequence, no self-test on the next spin-up,
+  and it does **not** fire the drive's configured venting (which a `P:010=0` stop would).
+
+> Toggling `P:010` on every spin (the naive "motor then station" each cycle) re-runs the
+> self-test and vents on every stop — avoid it for anything that cycles. `P:010=0` is a full
+> station shutdown, for a deliberate stop only.
 
 ## Protocol (manual §5.2)
 

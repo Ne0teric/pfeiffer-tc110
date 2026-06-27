@@ -14,10 +14,18 @@ wrappers exist for the handful the controller uses. Run `python -m pfeiffer_tc11
 (or call `print_parameters()`) to print the whole table — what every parameter does.
 
 Quick glossary of the two you care about most:
-  • P:023 MotorPump   — the TURBO MOTOR itself (the thing that spins). 1 = run.
-  • P:010 PumpgStatn  — the PUMPING STATION master switch: 1 = start the whole station
-                        (spins the pump up, also acknowledges errors), 0 = stop. The
-                        documented spin-up is motor ON (P:023) THEN station ON (P:010).
+  • P:010 PumpgStatn  — the PUMPING STATION master switch. Activating it (1) runs the
+                        drive self-test and brings the station + motor into operation;
+                        it's the high-level "arm" command and the only one that triggers
+                        a self-test. Defaults to 0, and resets to 0 on power-up.
+  • P:023 MotorPump   — the TURBO MOTOR itself. Defaults to 1 (on). Per the manual, once
+                        the station is armed (P:010=1) "the motor can be switched off and
+                        on via P:023" — so this is the spin up/down control.
+
+Spin model (see arm_station() + spin()): arm the station ONCE per power cycle (P:010=1,
+motor pre-held off), then drive every spin up/down via P:023 — the station stays latched,
+the rotor coasts on P:023=0, no repeated self-test, and P:010=0 (which fires the drive's
+configured venting) is never sent in normal operation.
 
 Telegram frame (ASCII, CR-terminated), manual §5.2.1:
 
@@ -323,14 +331,30 @@ def enable_pumping_station(ser, addr: int, on: bool) -> None:
 
 
 def spin(ser, addr: int, on: bool) -> None:
-    """Spin the turbo up/down using the manual's sequence. Up (§7.3): motor (P:023)
-    then pumping station (P:010). Down (§7.4): clear the pumping station (controlled
-    deceleration + configured venting). Requires set_control_via_rs485() first."""
-    if on:
-        set_motor(ser, addr, True)
-        enable_pumping_station(ser, addr, True)
-    else:
-        enable_pumping_station(ser, addr, False)
+    """Spin the turbo rotor up (on) or down (off) via the MOTOR command P:023. The
+    pumping station must already be armed (P:010=1) — call arm_station() once at start-up.
+    Up = motor on; down = motor off (the rotor coasts; the station stays armed, so there's
+    no station-shutdown sequence and no self-test on the next spin-up).
+
+    Why not P:023+P:010 each time? Per the manual P:023 (MotorPump) DEFAULTS TO 1 and
+    "once the pumping station is activated the motor can be switched off and on via P:023",
+    so P:010=1 is the real start (it brings the motor up) and the rotor is then driven by
+    P:023 alone. Toggling P:010 every cycle is redundant, re-runs the self-test, and a
+    P:010=0 spin-down fires the drive's configured venting. Requires set_control_via_rs485()
+    (P:060=2) — arm_station() does that too."""
+    set_motor(ser, addr, on)
+
+
+def arm_station(ser, addr: int, spinning: bool = False) -> None:
+    """Bring the drive up for RS-485 spin control, ONCE per power cycle. Sets RS-485
+    control (P:060=2), pre-sets the motor (P:023) per `spinning`, THEN activates the
+    pumping station (P:010=1). With spinning=False the station arms but the rotor stays
+    stopped (the motor is held off before the station goes active); spin() then starts it
+    via P:023. Pass spinning=True only when re-arming a pump that is already running so the
+    motor is never interrupted. P:010 resets to 0 on power-up, so run this on every start."""
+    set_control_via_rs485(ser, addr)          # P:060 = 2 (accept bus commands)
+    set_motor(ser, addr, spinning)            # P:023 — hold the rotor off unless recovering
+    enable_pumping_station(ser, addr, True)   # P:010 = 1 (arm; self-test happens here, once)
 
 
 def set_control_via_rs485(ser, addr: int) -> None:
