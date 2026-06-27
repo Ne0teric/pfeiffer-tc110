@@ -191,7 +191,8 @@ Generated from the driver (`PARAMS`). `acc` = R read / W write / RW both.
 
 `python -m pytest` — frames + checksums are asserted byte-exact against the manual's
 worked examples (query P:309 → `112`; "pump on" P:010 → `020`; the 633 Hz response),
-plus the motor→station spin order, codecs, and error/timeout handling. No hardware.
+plus the arm-station (P:060→P:023→P:010) + motor-only spin sequence, codecs, and
+error/timeout handling. No hardware.
 
 ## License / status
 
