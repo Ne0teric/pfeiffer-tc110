@@ -10,6 +10,14 @@ generic `read_parameter()` / `write_parameter()`, with named convenience wrapper
 the common operations. Extracted from the `vacuum-storage-unified` project so it can be
 reused and inspected on its own.
 
+> **The manual is bundled:** [`PfeifferTC110ElectronicDriveUnit.pdf`](PfeifferTC110ElectronicDriveUnit.pdf)
+> ships in this repo — the §5.2 telegram frame and §6 parameter set referenced
+> throughout are right here, so the driver is self-contained. This driver is also used
+> in production by the `vacuum-storage-unified-v3` controller
+> (github.com/Ne0teric/vacuum-storage-unified-v3), where its operational spin model is
+> *arm the pumping station once (P:010) then drive the rotor via the motor command
+> (P:023)*; this standalone driver keeps the manual's generic documented sequence.
+
 > **Why this exists:** the two public Pfeiffer libraries don't cover this — PyPI
 > `pfeiffer-vacuum-protocol` (electronsandstuff) is *gauge-only*, and `tspspi/pfeifferpumps`
 > is a low-level class encoder. Neither exposes `read_rotation_speed` / `enable_pumping_station`
